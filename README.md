@@ -1,5 +1,7 @@
 # @kweela/ledger
 
+[![Downloads](https://img.shields.io/npm/dt/@kweela/ledger?style=flat-square&link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2F@kweela/ledger)](https://www.npmjs.com/package/@kweela/ledger)
+
 A small, provider-neutral interface for storing and moving value.
 
 `@kweela/ledger` gives applications a consistent way to work with balances, wallets, transfers, deposits, withdrawals, settlement, and transaction history without knowing how those operations are implemented underneath.
