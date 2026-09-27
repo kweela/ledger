@@ -1,6 +1,6 @@
 {
   "name": "@kweela/ledger",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A small, provider-neutral interface for storing and moving value, with embedded wallets and replay protection.",
   "type": "module",
   "license": "MIT",

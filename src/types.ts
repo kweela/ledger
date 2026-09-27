@@ -295,6 +295,10 @@ export interface Ledger {
    * The asset this ledger denominates balances in. 
    */
   readonly asset: Asset
+  /** 
+   * Smallest amount the provider can represent as a transfer output. 
+   */
+  readonly minimumTransfer?: Amount
 
   createWallet(input: CreateWalletInput): Promise<LedgerWallet>
 
