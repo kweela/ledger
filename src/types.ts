@@ -160,6 +160,23 @@ export interface WalletCustodyExport {
   mnemonic: string | null
 }
 
+export interface SignMessageInput {
+  wallet: WalletRef
+  message: string
+}
+
+/**
+ * A message signed by a wallet, in the shape the ledger's own verifiers read.
+ *
+ * `identity` is what a verifier needs alongside the signature, such as a public key, and
+ * `signType` names the signature scheme.
+ */
+export interface SignedMessage {
+  signature: string
+  identity: string
+  signType: string
+}
+
 export interface CreateWalletInput {
   /**
    * The application's own identifier for the wallet's owner. An implementation may use
@@ -272,10 +289,18 @@ export interface LedgerCapabilities {
   instantSettlement: boolean
   /** Confirmations at which the ledger considers a movement settled. */
   confirmationsRequired: number
+  /** A wallet whose material is held can sign an arbitrary message. */
+  messageSigning?: boolean
 }
 
 /** An operation a ledger may or may not be able to perform. */
-export type LedgerOperation = 'mint' | 'deposit' | 'withdraw' | 'importWallet' | 'exportWallet'
+export type LedgerOperation =
+  | 'mint'
+  | 'deposit'
+  | 'withdraw'
+  | 'importWallet'
+  | 'exportWallet'
+  | 'signMessage'
 
 /**
  * Everything the application needs from a ledger.
@@ -328,6 +353,8 @@ export interface Ledger {
   importWallet?(input: ImportWalletInput): Promise<LedgerWallet>
 
   exportWallet?(wallet: WalletRef): Promise<WalletCustodyExport>
+
+  signMessage?(input: SignMessageInput): Promise<SignedMessage>
 
 
   /**

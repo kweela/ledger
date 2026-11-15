@@ -93,11 +93,12 @@ export class LedgerCoherence {
     ['withdraw', 'withdrawals'],
     ['exportWallet', 'selfCustody'],
     ['importWallet', 'externalWallets'],
+    ['signMessage', 'messageSigning'],
   ]
 
   static assert(ledger: Ledger): void {
     for (const [operation, capability] of this.pairs) {
-      const declared = ledger.capabilities[capability]
+      const declared = Boolean(ledger.capabilities[capability])
 
       if (this.performs(ledger, operation) === declared) continue
 
@@ -144,5 +145,5 @@ export class LedgerCoherence {
 /** The capability flags a member can be paired with. */
 type LedgerCapabilityNames = Pick<
   Ledger['capabilities'],
-  'minting' | 'deposits' | 'withdrawals' | 'selfCustody' | 'externalWallets'
+  'minting' | 'deposits' | 'withdrawals' | 'selfCustody' | 'externalWallets' | 'messageSigning'
 >

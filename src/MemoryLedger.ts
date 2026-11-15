@@ -20,6 +20,8 @@ import type {
   LedgerWallet,
   ListTransactionsInput,
   MintInput,
+  SignMessageInput,
+  SignedMessage,
   TransactionPage,
   TransactionRef,
   TransferInput,
@@ -87,6 +89,7 @@ class MemoryWallet implements LedgerWallet {
  */
 export class MemoryLedger extends BaseLedger {
   static readonly SECRET_SCHEME = 'memory.v1'
+  static readonly SIGN_TYPE = 'memory'
 
   readonly name = 'memory'
   readonly label = 'In-memory ledger'
@@ -118,6 +121,7 @@ export class MemoryLedger extends BaseLedger {
       memos: true,
       instantSettlement: this.autoSettle,
       confirmationsRequired: 1,
+      messageSigning: true,
     }
   }
 
@@ -263,6 +267,31 @@ export class MemoryLedger extends BaseLedger {
       address: wallet.address,
       secret: ref.secret ?? { scheme: MemoryLedger.SECRET_SCHEME, payload: wallet.seed },
       mnemonic: null,
+    }
+  }
+
+  /**
+   * Whether a message was signed by a wallet this ledger issued.
+   *
+   * Lets a test stand in for whatever verifier a real ledger's signatures meet.
+   */
+  verifyMessage(message: string, signed: SignedMessage): boolean {
+    const wallet = this.walletAt(signed.identity)
+
+    return (
+      signed.signType === MemoryLedger.SIGN_TYPE &&
+      wallet !== null &&
+      signed.signature === this.signatureOf(wallet, message)
+    )
+  }
+
+  protected override async performSignMessage(input: SignMessageInput): Promise<SignedMessage> {
+    const wallet = this.walletOrFail(input.wallet)
+
+    return {
+      signature: this.signatureOf(wallet, input.message),
+      identity: wallet.address,
+      signType: MemoryLedger.SIGN_TYPE,
     }
   }
 
@@ -412,6 +441,10 @@ export class MemoryLedger extends BaseLedger {
     if (wallet.balance.minus(this.committedOutflowOf(wallet)).isLessThan(amount)) {
       throw new InsufficientFundsError()
     }
+  }
+
+  private signatureOf(wallet: MemoryWallet, message: string): string {
+    return `memsig_${this.addressFor(`${wallet.seed}\n${message}`)}`
   }
 
   private walletOrFail(ref: WalletRef): MemoryWallet {

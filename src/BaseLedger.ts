@@ -6,6 +6,7 @@ import {
   InvalidDestinationError,
   MisconfiguredError,
   UnsupportedOperationError,
+  WalletLockedError,
 } from './errors'
 import type {
   CreateWalletInput,
@@ -22,6 +23,8 @@ import type {
   ListTransactionsInput,
   MintInput,
   SettlementStatus,
+  SignMessageInput,
+  SignedMessage,
   TransactionPage,
   TransactionRef,
   TransferInput,
@@ -73,6 +76,7 @@ export abstract class BaseLedger implements Ledger {
       withdraw: this.performWithdraw,
       importWallet: this.performImportWallet,
       exportWallet: this.performExportWallet,
+      signMessage: this.performSignMessage,
     }
 
     return typeof hooks[operation] === 'function'
@@ -119,6 +123,16 @@ export abstract class BaseLedger implements Ledger {
     }
 
     return this.performExportWallet(wallet)
+  }
+
+  async signMessage(input: SignMessageInput): Promise<SignedMessage> {
+    if (!this.capabilities.messageSigning || !this.performSignMessage) {
+      throw new UnsupportedOperationError('signing messages')
+    }
+    if (!input.message) throw new MisconfiguredError('There is no message to sign.')
+    if (!input.wallet.secret) throw new WalletLockedError(input.wallet.reference)
+
+    return this.performSignMessage(input)
   }
 
   async mint(input: MintInput): Promise<LedgerTransaction> {
@@ -202,6 +216,8 @@ export abstract class BaseLedger implements Ledger {
   protected performImportWallet?(input: ImportWalletInput): Promise<LedgerWallet>
 
   protected performExportWallet?(wallet: WalletRef): Promise<WalletCustodyExport>
+
+  protected performSignMessage?(input: SignMessageInput): Promise<SignedMessage>
 
   /** The deposit behind a reference, or null. Overridden by adapters with deposits. */
   protected async findDeposit(_reference: string): Promise<DepositIntent | null> {
