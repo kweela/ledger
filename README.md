@@ -92,6 +92,7 @@ ledger.capabilities.deposits
 ledger.capabilities.withdrawals
 ledger.capabilities.selfCustody
 ledger.capabilities.externalWallets
+ledger.capabilities.messageSigning
 ```
 
 Applications should use capabilities to decide what functionality is available instead of checking the provider name.

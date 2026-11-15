@@ -40,6 +40,7 @@ export type ConformanceCase =
   | 'deposits'
   | 'withdrawals'
   | 'self_custody'
+  | 'message_signing'
 
 export interface ConformanceOptions {
   /** A ledger with no history. Called once per case. */
@@ -135,6 +136,11 @@ export class LedgerConformanceSuite {
       ['deposits', 'offers somewhere to receive when it declares deposits', this.deposits],
       ['withdrawals', 'pays out and refuses a bad destination', this.withdrawals],
       ['self_custody', 'releases wallet material when it declares custody', this.selfCustody],
+      [
+        'message_signing',
+        'signs a message only with the wallet material',
+        this.messageSigning,
+      ],
     ]
   }
 
@@ -450,6 +456,27 @@ export class LedgerConformanceSuite {
     t.equals(exported.address, wallet.address)
     t.true(Boolean(exported.secret.scheme), 'the exported material names its scheme')
     t.true(Boolean(exported.secret.payload), 'the exported material carries the key')
+  }
+
+  private async messageSigning(t: ConformanceAssertions): Promise<void> {
+    const ledger = await this.ledger()
+    if (!ledger.capabilities.messageSigning) return
+
+    const wallet = await ledger.createWallet({
+      ownerKey: 'owner-signing',
+      idempotencyKey: 'conformance:signing:1',
+    })
+    const signed = await ledger.signMessage!({ wallet, message: 'conformance message' })
+
+    t.true(Boolean(signed.signature), 'the signature is present')
+    t.true(Boolean(signed.identity), 'the signature names what verifies it')
+    t.true(Boolean(signed.signType), 'the signature names its scheme')
+    await t.fails('wallet_locked', () =>
+      ledger.signMessage!({
+        wallet: { reference: wallet.reference, secret: null },
+        message: 'conformance message',
+      }),
+    )
   }
 
   private async ledger(): Promise<Ledger> {

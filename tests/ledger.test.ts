@@ -343,6 +343,18 @@ describe('the reference provider', () => {
     expect(imported.address).toBe(wallet.address)
   })
 
+  it('signs a message only the signing wallet verifies', async () => {
+    const provider = new MemoryLedger()
+    const wallet = await provider.createWallet({ ownerKey: 'a', idempotencyKey: 'a' })
+    const other = await provider.createWallet({ ownerKey: 'b', idempotencyKey: 'b' })
+    const signed = await provider.signMessage({ wallet, message: 'hello' })
+
+    expect(signed.identity).toBe(wallet.address)
+    expect(provider.verifyMessage('hello', signed)).toBe(true)
+    expect(provider.verifyMessage('hello again', signed)).toBe(false)
+    expect(provider.verifyMessage('hello', { ...signed, identity: other.address })).toBe(false)
+  })
+
   it('pages a wallet history without repeating an entry', async () => {
     const provider = new MemoryLedger({ autoSettle: true })
     const { from, to } = await fundedPair(provider)
