@@ -355,6 +355,21 @@ describe('the reference provider', () => {
     expect(provider.verifyMessage('hello', { ...signed, identity: other.address })).toBe(false)
   })
 
+  it('issues an identity to a wallet once per key', async () => {
+    const provider = new MemoryLedger()
+    const wallet = await provider.createWallet({ ownerKey: 'a', idempotencyKey: 'a' })
+    const first = await provider.issueIdentity({ wallet, idempotencyKey: 'id-1' })
+    const replayed = await provider.issueIdentity({ wallet, idempotencyKey: 'id-1' })
+    const second = await provider.issueIdentity({ wallet, idempotencyKey: 'id-2' })
+
+    expect(replayed).toEqual(first)
+    expect(second.identifier).not.toBe(first.identifier)
+    expect(provider.identitiesOf(wallet.address)).toEqual([first.identifier, second.identifier])
+    await expect(
+      provider.issueIdentity({ wallet: { reference: wallet.reference }, idempotencyKey: 'id-3' }),
+    ).rejects.toMatchObject({ code: 'wallet_locked' })
+  })
+
   it('pages a wallet history without repeating an entry', async () => {
     const provider = new MemoryLedger({ autoSettle: true })
     const { from, to } = await fundedPair(provider)
