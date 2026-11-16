@@ -177,6 +177,23 @@ export interface SignedMessage {
   signType: string
 }
 
+export interface IssueIdentityInput {
+  wallet: WalletRef
+  /** What makes this issuance happen once. */
+  idempotencyKey: string
+}
+
+/**
+ * An identity a wallet now holds on the ledger.
+ *
+ * `identifier` is the ledger's own name for it, which an identity provider turns into a
+ * DID, and `reference` is the transaction that issued it.
+ */
+export interface IssuedIdentity {
+  identifier: string
+  reference: string
+}
+
 export interface CreateWalletInput {
   /**
    * The application's own identifier for the wallet's owner. An implementation may use
@@ -291,6 +308,8 @@ export interface LedgerCapabilities {
   confirmationsRequired: number
   /** A wallet whose material is held can sign an arbitrary message. */
   messageSigning?: boolean
+  /** A wallet whose material is held can issue an on-ledger identity to itself. */
+  identityIssuance?: boolean
 }
 
 /** An operation a ledger may or may not be able to perform. */
@@ -301,6 +320,7 @@ export type LedgerOperation =
   | 'importWallet'
   | 'exportWallet'
   | 'signMessage'
+  | 'issueIdentity'
 
 /**
  * Everything the application needs from a ledger.
@@ -356,6 +376,7 @@ export interface Ledger {
 
   signMessage?(input: SignMessageInput): Promise<SignedMessage>
 
+  issueIdentity?(input: IssueIdentityInput): Promise<IssuedIdentity>
 
   /**
    * Whether this ledger can really perform an operation.

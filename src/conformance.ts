@@ -41,6 +41,7 @@ export type ConformanceCase =
   | 'withdrawals'
   | 'self_custody'
   | 'message_signing'
+  | 'identity_issuance'
 
 export interface ConformanceOptions {
   /** A ledger with no history. Called once per case. */
@@ -136,10 +137,11 @@ export class LedgerConformanceSuite {
       ['deposits', 'offers somewhere to receive when it declares deposits', this.deposits],
       ['withdrawals', 'pays out and refuses a bad destination', this.withdrawals],
       ['self_custody', 'releases wallet material when it declares custody', this.selfCustody],
+      ['message_signing', 'signs a message only with the wallet material', this.messageSigning],
       [
-        'message_signing',
-        'signs a message only with the wallet material',
-        this.messageSigning,
+        'identity_issuance',
+        'issues an identity once per key and only with the wallet material',
+        this.identityIssuance,
       ],
     ]
   }
@@ -475,6 +477,31 @@ export class LedgerConformanceSuite {
       ledger.signMessage!({
         wallet: { reference: wallet.reference, secret: null },
         message: 'conformance message',
+      }),
+    )
+  }
+
+  private async identityIssuance(t: ConformanceAssertions): Promise<void> {
+    const ledger = await this.ledger()
+    if (!ledger.capabilities.identityIssuance) return
+
+    const wallet = await ledger.createWallet({
+      ownerKey: 'owner-identity',
+      idempotencyKey: 'conformance:identity:1',
+    })
+    const issued = await ledger.issueIdentity!({ wallet, idempotencyKey: 'conformance:identity:1' })
+    const replayed = await ledger.issueIdentity!({
+      wallet,
+      idempotencyKey: 'conformance:identity:1',
+    })
+
+    t.true(Boolean(issued.identifier), 'the identity has an identifier')
+    t.true(Boolean(issued.reference), 'the identity names the transaction that issued it')
+    t.equals(replayed.identifier, issued.identifier)
+    await t.fails('wallet_locked', () =>
+      ledger.issueIdentity!({
+        wallet: { reference: wallet.reference, secret: null },
+        idempotencyKey: 'conformance:identity:2',
       }),
     )
   }

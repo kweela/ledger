@@ -94,6 +94,7 @@ export class LedgerCoherence {
     ['exportWallet', 'selfCustody'],
     ['importWallet', 'externalWallets'],
     ['signMessage', 'messageSigning'],
+    ['issueIdentity', 'identityIssuance'],
   ]
 
   static assert(ledger: Ledger): void {
@@ -145,5 +146,11 @@ export class LedgerCoherence {
 /** The capability flags a member can be paired with. */
 type LedgerCapabilityNames = Pick<
   Ledger['capabilities'],
-  'minting' | 'deposits' | 'withdrawals' | 'selfCustody' | 'externalWallets' | 'messageSigning'
+  | 'minting'
+  | 'deposits'
+  | 'withdrawals'
+  | 'selfCustody'
+  | 'externalWallets'
+  | 'messageSigning'
+  | 'identityIssuance'
 >

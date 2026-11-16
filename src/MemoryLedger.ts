@@ -13,6 +13,8 @@ import type {
   DepositInput,
   DepositIntent,
   ImportWalletInput,
+  IssueIdentityInput,
+  IssuedIdentity,
   LedgerBalance,
   LedgerCapabilities,
   LedgerHealth,
@@ -98,6 +100,7 @@ export class MemoryLedger extends BaseLedger {
 
   private readonly wallets = new Map<string, MemoryWallet>()
   private readonly addresses = new Map<string, string>()
+  private readonly identities = new Map<string, string[]>()
   private readonly transactions = new Map<string, LedgerTransaction>()
   private readonly deposits = new Map<string, DepositIntent>()
   private readonly fee: Amount
@@ -122,6 +125,7 @@ export class MemoryLedger extends BaseLedger {
       instantSettlement: this.autoSettle,
       confirmationsRequired: 1,
       messageSigning: true,
+      identityIssuance: true,
     }
   }
 
@@ -293,6 +297,24 @@ export class MemoryLedger extends BaseLedger {
       identity: wallet.address,
       signType: MemoryLedger.SIGN_TYPE,
     }
+  }
+
+  /** The identifiers issued to the wallet at an address, oldest first. */
+  identitiesOf(address: string): string[] {
+    return [...(this.identities.get(address) ?? [])]
+  }
+
+  protected override async performIssueIdentity(
+    input: IssueIdentityInput,
+  ): Promise<IssuedIdentity> {
+    const wallet = this.walletOrFail(input.wallet)
+    const held = this.identities.get(wallet.address) ?? []
+    const identifier = `memid_${this.addressFor(`${wallet.seed}\nidentity:${held.length}`)}`
+
+    held.push(identifier)
+    this.identities.set(wallet.address, held)
+
+    return { identifier, reference: `mem-identity-${wallet.address}-${held.length}` }
   }
 
   protected override async performMint(input: MintInput): Promise<LedgerTransaction> {

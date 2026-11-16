@@ -13,6 +13,8 @@ import type {
   DepositInput,
   DepositIntent,
   ImportWalletInput,
+  IssueIdentityInput,
+  IssuedIdentity,
   LedgerBalance,
   LedgerCapabilities,
   LedgerHealth,
@@ -77,6 +79,7 @@ export abstract class BaseLedger implements Ledger {
       importWallet: this.performImportWallet,
       exportWallet: this.performExportWallet,
       signMessage: this.performSignMessage,
+      issueIdentity: this.performIssueIdentity,
     }
 
     return typeof hooks[operation] === 'function'
@@ -133,6 +136,24 @@ export abstract class BaseLedger implements Ledger {
     if (!input.wallet.secret) throw new WalletLockedError(input.wallet.reference)
 
     return this.performSignMessage(input)
+  }
+
+  async issueIdentity(input: IssueIdentityInput): Promise<IssuedIdentity> {
+    if (!this.capabilities.identityIssuance || !this.performIssueIdentity) {
+      throw new UnsupportedOperationError('issuing identities')
+    }
+    this.assertIdempotencyKey(input.idempotencyKey)
+    if (!input.wallet.secret) throw new WalletLockedError(input.wallet.reference)
+
+    return this.idempotency.once(
+      this.scope('identity', input.idempotencyKey),
+      async (reference) => BaseLedger.issuedFrom(reference),
+      async () => {
+        const issued = await this.performIssueIdentity!(input)
+
+        return { reference: JSON.stringify(issued), result: issued }
+      },
+    )
   }
 
   async mint(input: MintInput): Promise<LedgerTransaction> {
@@ -219,6 +240,8 @@ export abstract class BaseLedger implements Ledger {
 
   protected performSignMessage?(input: SignMessageInput): Promise<SignedMessage>
 
+  protected performIssueIdentity?(input: IssueIdentityInput): Promise<IssuedIdentity>
+
   /** The deposit behind a reference, or null. Overridden by adapters with deposits. */
   protected async findDeposit(_reference: string): Promise<DepositIntent | null> {
     return null
@@ -250,6 +273,19 @@ export abstract class BaseLedger implements Ledger {
         return { reference: transaction.reference, result: transaction }
       },
     )
+  }
+
+  /** An issued identity as remembered against its idempotency key. */
+  private static issuedFrom(remembered: string): IssuedIdentity | null {
+    try {
+      const value = JSON.parse(remembered) as Partial<IssuedIdentity>
+
+      return value.identifier && value.reference
+        ? { identifier: value.identifier, reference: value.reference }
+        : null
+    } catch {
+      return null
+    }
   }
 
   /** Keys are the caller's, so one namespace per kind of thing they create. */
